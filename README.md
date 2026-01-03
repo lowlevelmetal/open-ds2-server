@@ -180,6 +180,195 @@ Start the game and attempt to connect to multiplayer. The client should connect 
 
 ---
 
+## 🖥️ Client Setup Guide
+
+Detailed instructions for connecting Dead Space 2 to your custom server.
+
+### Windows Setup
+
+#### 1. Edit Hosts File
+
+1. Open Notepad **as Administrator** (right-click → Run as administrator)
+2. Open the file: `C:\Windows\System32\drivers\etc\hosts`
+3. Add these lines at the bottom (replace `SERVER_IP` with your server's IP address):
+
+```
+# Dead Space 2 Custom Server
+SERVER_IP    gosredirector.ea.com
+SERVER_IP    gosredirector.online.ea.com
+```
+
+4. Save the file
+
+> **Example**: If your server is at `192.168.1.100`:
+> ```
+> 192.168.1.100    gosredirector.ea.com
+> 192.168.1.100    gosredirector.online.ea.com
+> ```
+
+#### 2. Flush DNS Cache
+
+Open Command Prompt as Administrator and run:
+```cmd
+ipconfig /flushdns
+```
+
+#### 3. Firewall Configuration
+
+If running the server locally, ensure Windows Firewall allows:
+- **TCP port 42127** (Redirector - SSL)
+- **TCP port 10041** (Game server)
+
+```cmd
+netsh advfirewall firewall add rule name="DS2 Redirector" dir=in action=allow protocol=TCP localport=42127
+netsh advfirewall firewall add rule name="DS2 Game Server" dir=in action=allow protocol=TCP localport=10041
+```
+
+#### 4. Launch Game
+
+1. Start Dead Space 2 from Steam/Origin
+2. Go to Multiplayer
+3. The game will connect to your custom server
+
+---
+
+### Linux (Proton/Steam) Setup
+
+#### 1. Edit Hosts File
+
+```bash
+sudo nano /etc/hosts
+```
+
+Add these lines (replace `SERVER_IP` with your server's IP):
+
+```
+# Dead Space 2 Custom Server
+SERVER_IP    gosredirector.ea.com
+SERVER_IP    gosredirector.online.ea.com
+```
+
+Save with `Ctrl+O`, exit with `Ctrl+X`.
+
+#### 2. Flush DNS Cache
+
+Depending on your distro:
+
+```bash
+# systemd-resolved (Ubuntu, Fedora, Arch, etc.)
+sudo systemd-resolve --flush-caches
+
+# Or restart the service
+sudo systemctl restart systemd-resolved
+
+# NetworkManager
+sudo systemctl restart NetworkManager
+
+# nscd (if installed)
+sudo nscd -i hosts
+```
+
+#### 3. Steam Proton Configuration
+
+Dead Space 2 runs well under Proton. Recommended settings:
+
+1. In Steam, right-click **Dead Space 2** → **Properties**
+2. Go to **Compatibility**
+3. Check **Force the use of a specific Steam Play compatibility tool**
+4. Select **Proton Experimental** or **Proton 8.0+**
+
+#### 4. Launch Options (Optional)
+
+For better debugging, you can add launch options:
+
+1. Right-click Dead Space 2 → Properties → General
+2. In **Launch Options**, add:
+   ```
+   PROTON_LOG=1 %command%
+   ```
+
+This creates logs in your home directory if you encounter issues.
+
+#### 5. Firewall Configuration
+
+If running the server on Linux:
+
+```bash
+# UFW (Ubuntu)
+sudo ufw allow 42127/tcp comment "DS2 Redirector"
+sudo ufw allow 10041/tcp comment "DS2 Game Server"
+
+# firewalld (Fedora, RHEL)
+sudo firewall-cmd --permanent --add-port=42127/tcp
+sudo firewall-cmd --permanent --add-port=10041/tcp
+sudo firewall-cmd --reload
+
+# iptables
+sudo iptables -A INPUT -p tcp --dport 42127 -j ACCEPT
+sudo iptables -A INPUT -p tcp --dport 10041 -j ACCEPT
+```
+
+#### 6. Launch Game
+
+Start Dead Space 2 from Steam and go to Multiplayer.
+
+---
+
+### Troubleshooting
+
+#### Connection Refused / Timeout
+
+1. **Verify hosts file**: Run `ping gosredirector.ea.com` - it should resolve to your server IP
+2. **Check server is running**: Ensure you see "Server is running" in the server console
+3. **Firewall**: Make sure ports 42127 and 10041 are open
+4. **SSL Issues**: The game requires SSL on port 42127. Check server logs for SSL errors
+
+#### DNS Not Updating
+
+- Windows: Run `ipconfig /flushdns` and restart your browser/game
+- Linux: Restart systemd-resolved or NetworkManager
+- Try rebooting if DNS changes don't take effect
+
+#### SSL Certificate Errors
+
+The game validates SSL certificates. Current workarounds:
+
+1. **Use the generated certificates** - Run `./scripts/generate_certs.sh` on the server
+2. **Client patching** (advanced) - May be needed to bypass certificate validation
+
+#### Game Crashes on Connect
+
+- Check Proton version (try Proton Experimental)
+- Verify game files in Steam
+- Check server logs for protocol errors
+
+#### "Server Unavailable" Message
+
+This usually means the redirector responded but pointed to an unreachable game server. Verify:
+- Game server port (10041) is accessible
+- Server configuration has correct ports
+- No firewall blocking between client and server
+
+---
+
+### Network Diagram
+
+```
+┌─────────────────┐         ┌─────────────────────────────────┐
+│  Your Computer  │         │          Server                 │
+│                 │         │                                 │
+│  Dead Space 2   │◄───────►│  Port 42127 (SSL Redirector)   │
+│   (Client)      │   SSL   │                                 │
+│                 │         │  Port 10041 (Game Server)       │
+│  hosts file:    │◄───────►│                                 │
+│  gosredirector  │   TCP   │                                 │
+│  .ea.com →      │         │                                 │
+│  SERVER_IP      │         │                                 │
+└─────────────────┘         └─────────────────────────────────┘
+```
+
+---
+
 ## 📁 Project Structure
 
 ```

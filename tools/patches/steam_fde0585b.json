@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "game": "Dead Space 2",
+    "file": "activation.x86.dll",
+    "version": "Steam",
+    "original_hash": "fde0585b30ddb8deb1f60b5af9a4a001",
+    "patched_hash": "001432d99be3038c02a86ae0127ebc9c",
+    "tested": false,
+    "notes": "Patches all SSL_CTX_set_verify calls to use SSL_VERIFY_NONE"
+  },
+  "patches": [
+    {"offset": "0x0001410A", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x000E3465", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x0013F34E", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x00175195", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x004BAF20", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x00510672", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x005D5445", "original": "01", "patched": "00", "description": "SSL_VERIFY_PEER -> SSL_VERIFY_NONE"},
+    {"offset": "0x0007FDF9", "original": "02", "patched": "00", "description": "SSL_VERIFY_FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x0024B977", "original": "02", "patched": "00", "description": "SSL_VERIFY_FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x0034195D", "original": "02", "patched": "00", "description": "SSL_VERIFY_FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x005FA4AB", "original": "02", "patched": "00", "description": "SSL_VERIFY_FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x000F36B3", "original": "03", "patched": "00", "description": "SSL_VERIFY_PEER|FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x001BD490", "original": "03", "patched": "00", "description": "SSL_VERIFY_PEER|FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x001DA40A", "original": "03", "patched": "00", "description": "SSL_VERIFY_PEER|FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"},
+    {"offset": "0x002B273A", "original": "03", "patched": "00", "description": "SSL_VERIFY_PEER|FAIL_IF_NO_PEER_CERT -> SSL_VERIFY_NONE"}
+  ]
+}

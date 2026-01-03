@@ -60,11 +60,16 @@ Thumbs.db
 *.log
 logs/
 
-# Config (keep template)
+# Config (keep templates)
 config/server.ini
 !config/server.ini.example
+!config/openssl-legacy.cnf
 
 # Debug
 *.dSYM/
 core
 vgcore.*
+
+# Memory dumps and analysis artifacts
+*.bin
+tools/activation_dumped.bin

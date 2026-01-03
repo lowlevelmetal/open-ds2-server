@@ -65,7 +65,13 @@ int main(int argc, char* argv[]) {
     uint16_t redirectorPort = static_cast<uint16_t>(config.getInt("redirector_port", 42127));
     uint16_t gamePort = static_cast<uint16_t>(config.getInt("blaze_game_port", 10041));
     
-    LOG_INFO("Redirector port: " + std::to_string(redirectorPort));
+    // Get SSL configuration
+    bool useSSL = config.getBool("ssl_enabled", true);
+    std::string sslCert = config.getString("ssl_cert", "certs/server.crt");
+    std::string sslKey = config.getString("ssl_key", "certs/server.key");
+    
+    LOG_INFO("Redirector port: " + std::to_string(redirectorPort) + 
+             (useSSL ? " (SSL)" : " (plain)"));
     LOG_INFO("Game server port: " + std::to_string(gamePort));
     
     // Register Blaze protocol handlers
@@ -74,7 +80,12 @@ int main(int argc, char* argv[]) {
     // Create and start the Blaze server
     ds2::blaze::BlazeServer server;
     
-    if (!server.initialize(redirectorPort, gamePort, false)) {
+    // Configure SSL if enabled
+    if (useSSL) {
+        server.setSSLFiles(sslCert, sslKey);
+    }
+    
+    if (!server.initialize(redirectorPort, gamePort, useSSL)) {
         LOG_ERROR("Failed to initialize Blaze server");
         return 1;
     }

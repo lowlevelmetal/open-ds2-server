@@ -3,6 +3,9 @@ build/
 cmake-build-*/
 out/
 
+# SSL certificates (contain private keys - do not commit!)
+certs/
+
 # CMake generated files
 CMakeCache.txt
 CMakeFiles/

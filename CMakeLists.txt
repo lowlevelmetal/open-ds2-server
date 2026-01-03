@@ -32,10 +32,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Find required packages
 find_package(Threads REQUIRED)
-
-# Optional: Find additional libraries
-# find_package(OpenSSL)
-# find_package(SQLite3)
+find_package(OpenSSL REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -52,6 +49,7 @@ set(NETWORK_SOURCES
     src/network/udp_server.cpp
     src/network/packet.cpp
     src/network/packet_handler.cpp
+    src/network/ssl_socket.cpp
 )
 
 set(PROTOCOL_SOURCES
@@ -92,6 +90,8 @@ add_executable(ds2-server
 
 target_link_libraries(ds2-server PRIVATE
     Threads::Threads
+    OpenSSL::SSL
+    OpenSSL::Crypto
 )
 
 # Platform-specific linking

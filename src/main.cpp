@@ -9,9 +9,9 @@
 #include <csignal>
 #include <atomic>
 
-#include "core/server.hpp"
 #include "core/config.hpp"
 #include "utils/logger.hpp"
+#include "blaze/blaze_server.hpp"
 #include "blaze/components.hpp"
 
 std::atomic<bool> g_running{true};
@@ -60,31 +60,36 @@ int main(int argc, char* argv[]) {
     );
     
     LOG_INFO("Starting Open DS2 Server...");
-    LOG_INFO("Bind address: " + config.getString("bind_address", "0.0.0.0"));
-    LOG_INFO("Game port: " + std::to_string(config.getInt("game_port", 28910)));
+    
+    // Get Blaze ports from config (or use defaults)
+    uint16_t redirectorPort = static_cast<uint16_t>(config.getInt("redirector_port", 42127));
+    uint16_t gamePort = static_cast<uint16_t>(config.getInt("blaze_game_port", 10041));
+    
+    LOG_INFO("Redirector port: " + std::to_string(redirectorPort));
+    LOG_INFO("Game server port: " + std::to_string(gamePort));
     
     // Register Blaze protocol handlers
     ds2::blaze::registerAllHandlers();
     
-    // Create and start the server
-    ds2::Server server;
+    // Create and start the Blaze server
+    ds2::blaze::BlazeServer server;
     
-    if (!server.initialize()) {
-        LOG_ERROR("Failed to initialize server");
+    if (!server.initialize(redirectorPort, gamePort, false)) {
+        LOG_ERROR("Failed to initialize Blaze server");
         return 1;
     }
     
     if (!server.start()) {
-        LOG_ERROR("Failed to start server");
+        LOG_ERROR("Failed to start Blaze server");
         return 1;
     }
     
     LOG_INFO("Server is running. Press Ctrl+C to stop.");
+    LOG_INFO("To connect, redirect gosredirector.ea.com to this server's IP");
     
     // Main loop
     while (g_running) {
-        server.update();
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     
     // Cleanup

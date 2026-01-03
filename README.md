@@ -10,7 +10,7 @@
 
 ## 💀 The Story
 
-My buddy and I used to play Dead Space 2 multiplayer on Xbox 360 back in the day. Recently we tried to relive those memories only to find EA shut down the servers. We won't stand for it—so we're rebuilding them ourselves. *Make us whole again.*
+My buddy and I both love Dead Space 2. We wanted to play the multiplayer together on PC, only to find EA shut down the servers. We won't stand for it—so we're rebuilding them ourselves. *Make us whole again.*
 
 ---
 

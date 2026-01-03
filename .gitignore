@@ -1,0 +1,67 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+compile_commands.json
+
+# Compiled binaries
+bin/
+lib/
+*.exe
+*.out
+*.app
+ds2-server
+
+# Object files
+*.o
+*.obj
+*.lo
+*.slo
+
+# Precompiled headers
+*.gch
+*.pch
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lai
+*.so
+*.so.*
+*.dylib
+*.dll
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.cproject
+.settings/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Config (keep template)
+config/server.ini
+!config/server.ini.example
+
+# Debug
+*.dSYM/
+core
+vgcore.*

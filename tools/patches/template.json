@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "game": "Dead Space 2",
+    "file": "activation.x86.dll",
+    "version": "Unknown - Template",
+    "file_hash": "REPLACE_WITH_ACTUAL_MD5",
+    "tested": false,
+    "notes": "This is a template file. Replace with actual patch data after testing."
+  },
+  "patches": [
+    {
+      "offset": "0x00000000",
+      "original": "01",
+      "patched": "00",
+      "description": "SSL_CTX_set_verify: SSL_VERIFY_PEER -> SSL_VERIFY_NONE"
+    }
+  ]
+}

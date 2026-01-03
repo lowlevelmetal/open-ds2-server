@@ -103,11 +103,34 @@ endif()
 install(TARGETS ds2-server RUNTIME DESTINATION bin)
 install(DIRECTORY config/ DESTINATION etc/ds2-server)
 
-# Testing (optional)
-option(BUILD_TESTS "Build tests" OFF)
+# Testing
+option(BUILD_TESTS "Build tests" ON)
 if(BUILD_TESTS)
     enable_testing()
-    add_subdirectory(tests)
+    
+    # Test executable
+    add_executable(ds2-tests
+        tests/run_tests.cpp
+    )
+    
+    target_include_directories(ds2-tests PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/tests
+    )
+    
+    # Link test executable with required object files
+    target_sources(ds2-tests PRIVATE
+        src/blaze/tdf.cpp
+        src/blaze/blaze_codec.cpp
+        src/utils/logger.cpp
+    )
+    
+    target_link_libraries(ds2-tests PRIVATE
+        Threads::Threads
+    )
+    
+    # Add test
+    add_test(NAME unit_tests COMMAND ds2-tests)
 endif()
 
 # Print configuration summary

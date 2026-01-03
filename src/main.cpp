@@ -12,6 +12,7 @@
 #include "core/server.hpp"
 #include "core/config.hpp"
 #include "utils/logger.hpp"
+#include "blaze/components.hpp"
 
 std::atomic<bool> g_running{true};
 
@@ -61,6 +62,9 @@ int main(int argc, char* argv[]) {
     LOG_INFO("Starting Open DS2 Server...");
     LOG_INFO("Bind address: " + config.getString("bind_address", "0.0.0.0"));
     LOG_INFO("Game port: " + std::to_string(config.getInt("game_port", 28910)));
+    
+    // Register Blaze protocol handlers
+    ds2::blaze::registerAllHandlers();
     
     // Create and start the server
     ds2::Server server;

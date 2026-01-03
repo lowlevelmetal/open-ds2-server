@@ -72,6 +72,13 @@ set(DATABASE_SOURCES
     src/database/player_repository.cpp
 )
 
+set(BLAZE_SOURCES
+    src/blaze/tdf.cpp
+    src/blaze/blaze_codec.cpp
+    src/blaze/components.cpp
+    src/blaze/blaze_server.cpp
+)
+
 # Create the server executable
 add_executable(ds2-server
     src/main.cpp
@@ -80,6 +87,7 @@ add_executable(ds2-server
     ${PROTOCOL_SOURCES}
     ${UTILS_SOURCES}
     ${DATABASE_SOURCES}
+    ${BLAZE_SOURCES}
 )
 
 target_link_libraries(ds2-server PRIVATE

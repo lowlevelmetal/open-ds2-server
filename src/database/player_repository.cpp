@@ -1,6 +1,7 @@
 #include "player_repository.hpp"
 #include "utils/logger.hpp"
 
+#include <algorithm>
 #include <map>
 #include <mutex>
 

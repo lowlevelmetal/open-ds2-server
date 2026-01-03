@@ -4,6 +4,8 @@
 #include "utils/buffer.hpp"
 #include "utils/logger.hpp"
 
+#include <algorithm>
+
 namespace ds2 {
 namespace protocol {
 

@@ -99,7 +99,7 @@ struct PacketHeader {
 };
 #pragma pack(pop)
 
-constexpr uint16_t PACKET_MAGIC = 0xDS02; // Placeholder magic number
+constexpr uint16_t PACKET_MAGIC = 0xD502; // Placeholder magic number (D5=DS)
 constexpr size_t PACKET_HEADER_SIZE = sizeof(PacketHeader);
 constexpr size_t MAX_PACKET_SIZE = 65536;
 

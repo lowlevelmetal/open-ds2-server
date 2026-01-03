@@ -31,6 +31,7 @@ namespace network {
 class TcpSocket {
 public:
     TcpSocket();
+    explicit TcpSocket(socket_t socket);  // Gets peer address automatically
     explicit TcpSocket(socket_t socket, const sockaddr_in& addr);
     ~TcpSocket();
     

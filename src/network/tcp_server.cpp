@@ -2,6 +2,7 @@
 #include "utils/logger.hpp"
 
 #include <cstring>
+#include <netinet/tcp.h>
 
 namespace ds2 {
 namespace network {
@@ -44,6 +45,19 @@ void cleanupNetworking() {
 
 TcpSocket::TcpSocket() {
     initializeNetworking();
+}
+
+TcpSocket::TcpSocket(socket_t socket)
+    : m_socket(socket)
+{
+    initializeNetworking();
+    // Get peer address
+    socklen_t addrLen = sizeof(m_remoteAddr);
+    if (getpeername(socket, (sockaddr*)&m_remoteAddr, &addrLen) < 0) {
+        std::memset(&m_remoteAddr, 0, sizeof(m_remoteAddr));
+    }
+    setNonBlocking(true);
+    setNoDelay(true);
 }
 
 TcpSocket::TcpSocket(socket_t socket, const sockaddr_in& addr)

@@ -10,15 +10,7 @@
 
 ## 💀 The Story
 
-Back in 2011, my buddy and I spent countless nights huddled around an Xbox 360, screaming at each other through headsets as we took turns being torn apart by necromorphs or doing the tearing ourselves. Dead Space 2's multiplayer was something special—asymmetrical horror where one team played as desperate humans trying to complete objectives while the other spawned as grotesque necromorphs hunting them down. The tension was unreal. The teamwork was chaotic. The memories were unforgettable.
-
-Fast forward to recently—we fired up the old copies, ready for a nostalgia trip, only to be greeted with connection errors. The servers were gone. EA had pulled the plug, and with it, any hope of reliving those terrifying nights.
-
-**We won't stand for it.**
-
-This project exists because some experiences are worth preserving. Because somewhere out there, other people have the same memories we do. And because if EA won't keep the lights on, we'll build our own damn lighthouse.
-
-*Make us whole again.*
+My buddy and I used to play Dead Space 2 multiplayer on Xbox 360 back in the day. Recently we tried to relive those memories only to find EA shut down the servers. We won't stand for it—so we're rebuilding them ourselves. *Make us whole again.*
 
 ---
 

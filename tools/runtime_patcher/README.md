@@ -1,12 +1,13 @@
-# Dead Space 2 Runtime SSL Patcher
+# Dead Space 2 SSL Certificate Bypass
 
-This tool patches the SSL certificate verification **in memory** at runtime, bypassing the DLL protection/packing that prevents static patching.
+This tool patches the SSL certificate verification **in memory** at runtime, allowing the game to connect to custom servers with self-signed certificates.
 
 ## Files
 
 | File | Description |
 |------|-------------|
-| `ds2_ssl_patcher_v11.c` | Main patcher source - patches SSL verify callback |
+| `ds2_ssl_bypass.c` | **Recommended** - Clean rewrite with improved logging |
+| `ds2_ssl_patcher_v11.c` | Legacy patcher (still works) |
 | `launch_and_patch.sh` | Linux/Proton launch script with auto-patching |
 
 ## Why Runtime Patching?
@@ -20,9 +21,9 @@ The `activation.x86.dll` in Dead Space 2 is protected with a packer/obfuscator. 
 
 ### On Windows (Native)
 
-1. Start Dead Space 2 normally
-2. **Before** going to multiplayer, run `ds2_ssl_patcher_v11.exe` as Administrator
-3. Wait for it to say "PATCH SUCCESSFUL"
+1. Run `ds2_ssl_bypass.exe` as Administrator
+2. Start Dead Space 2
+3. Wait for "CERTIFICATE BYPASS ACTIVE" message
 4. Go to multiplayer in the game
 
 ### On Linux with Proton/Wine
@@ -34,7 +35,7 @@ The `activation.x86.dll` in Dead Space 2 is protected with a packer/obfuscator. 
    cd ~/.steam/steam/steamapps/compatdata/47780/pfx
    
    # Run the patcher with Wine
-   WINEPREFIX="$PWD" wine /path/to/ds2_ssl_patcher_v11.exe
+   WINEPREFIX="$PWD" wine /path/to/ds2_ssl_bypass.exe
    ```
 3. Wait for patches to apply
 4. Go to multiplayer in the game
@@ -55,13 +56,19 @@ This script will:
 ### On Linux (Cross-compile)
 
 ```bash
-i686-w64-mingw32-gcc -o ds2_ssl_patcher_v11.exe ds2_ssl_patcher_v11.c -lpsapi -Wall
+i686-w64-mingw32-gcc -o ds2_ssl_bypass.exe ds2_ssl_bypass.c -lpsapi -Wall -O2
 ```
 
 ### On Windows with MinGW
 
 ```bash
-gcc -o ds2_ssl_patcher_v11.exe ds2_ssl_patcher_v11.c -lpsapi
+gcc -o ds2_ssl_bypass.exe ds2_ssl_bypass.c -lpsapi -Wall
+```
+
+### On Windows with MSVC
+
+```bash
+cl ds2_ssl_bypass.c /link psapi.lib
 ```
 
 ## How It Works

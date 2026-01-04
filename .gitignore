@@ -73,3 +73,6 @@ vgcore.*
 # Memory dumps and analysis artifacts
 *.bin
 tools/activation_dumped.bin
+
+# Python virtual environment
+venv/

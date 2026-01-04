@@ -69,6 +69,17 @@ static void sslInfoCallback(const SSL* ssl, int where, int ret) {
                 LOG_INFO(std::string("  Selected cipher: ") + SSL_CIPHER_get_name(cipher));
             }
             LOG_INFO(std::string("  Protocol version: ") + SSL_get_version(ssl));
+            
+            // Log client's offered ciphers
+            STACK_OF(SSL_CIPHER)* clientCiphers = SSL_get_client_ciphers(ssl);
+            if (clientCiphers) {
+                int count = sk_SSL_CIPHER_num(clientCiphers);
+                LOG_INFO("  Client offered " + std::to_string(count) + " ciphers:");
+                for (int i = 0; i < count && i < 15; i++) {
+                    const SSL_CIPHER* c = sk_SSL_CIPHER_value(clientCiphers, i);
+                    LOG_INFO("    " + std::string(SSL_CIPHER_get_name(c)));
+                }
+            }
         }
     } else if (where & SSL_CB_ALERT) {
         str = (where & SSL_CB_READ) ? "read" : "write";
@@ -106,45 +117,57 @@ bool SslContext::initialize(const std::string& certFile, const std::string& keyF
     
     // Allow SSLv3 and TLS 1.0 for OpenSSL 1.0.0b game client
     // Only disable SSLv2 (truly broken) and newer TLS versions the client won't understand
-    long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2;
+    long options = SSL_OP_NO_SSLv2 | SSL_OP_NO_TLSv1_1 | SSL_OP_NO_TLSv1_2 | SSL_OP_NO_TLSv1_3;
     // Disable features that might confuse old clients
     options |= SSL_OP_NO_TICKET;  // No session tickets
     options |= SSL_OP_NO_COMPRESSION;  // No compression
     options |= SSL_OP_LEGACY_SERVER_CONNECT;  // Legacy renegotiation
     SSL_CTX_set_options(m_ctx, options);
     
-    // Set minimum protocol to SSLv3 (our bundled OpenSSL 1.1.1 supports this with legacy provider)
+    // Set minimum protocol to SSLv3, max to TLS 1.0 (our bundled OpenSSL 1.1.1 supports this)
     SSL_CTX_set_min_proto_version(m_ctx, SSL3_VERSION);
     SSL_CTX_set_max_proto_version(m_ctx, TLS1_VERSION);
     
-    // Try anonymous DH ciphers first (no certificate needed), then fall back to regular ciphers
-    // ADH = Anonymous Diffie-Hellman (no server certificate)
-    // This bypasses certificate verification entirely
-    if (!SSL_CTX_set_cipher_list(m_ctx, "ADH:ALL:!aNULL:!eNULL:@STRENGTH")) {
-        // If ADH not available, use regular ciphers
+    // Explicitly disable TLS 1.3 ciphersuites (separate from cipher list in OpenSSL 1.1.1)
+    SSL_CTX_set_ciphersuites(m_ctx, "");  // Empty string disables all TLS 1.3 suites
+    
+    // Use classic RSA ciphers that OpenSSL 1.0.0b definitely supports
+    // The game client likely uses RSA key exchange with RC4 or AES
+    // Order: Most compatible first, only SSLv3/TLS1.0 ciphers
+    // Don't use @STRENGTH which reorders by key length
+    const char* cipherList = 
+        "RC4-SHA:RC4-MD5:"                              // RC4 ciphers (fast, widely supported in 2010)
+        "AES128-SHA:AES256-SHA:"                        // AES-CBC with SHA1
+        "DES-CBC3-SHA:"                                 // 3DES fallback  
+        "DHE-RSA-AES128-SHA:DHE-RSA-AES256-SHA:"        // DHE variants
+        "EDH-RSA-DES-CBC3-SHA:"                         // EDH 3DES
+        "!aNULL:!eNULL:!EXPORT:!MD5";                   // Security exclusions
+    
+    if (!SSL_CTX_set_cipher_list(m_ctx, cipherList)) {
+        LOG_WARN("Failed to set preferred cipher list, using defaults");
         SSL_CTX_set_cipher_list(m_ctx, "ALL:!aNULL:!eNULL:@STRENGTH");
     }
     
-    // Generate DH parameters for anonymous DH
-    DH *dh = DH_new();
-    if (dh) {
-        // Use a standard 1024-bit DH prime for compatibility
-        BIGNUM *p = BN_new();
-        BIGNUM *g = BN_new();
-        if (p && g) {
-            // RFC 2409 1024-bit MODP Group
-            BN_hex2bn(&p, "FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE65381FFFFFFFFFFFFFFFF");
-            BN_set_word(g, 2);
-            DH_set0_pqg(dh, p, NULL, g);
-            SSL_CTX_set_tmp_dh(m_ctx, dh);
+    // Log available ciphers
+    SSL* tmpSsl = SSL_new(m_ctx);
+    if (tmpSsl) {
+        STACK_OF(SSL_CIPHER)* ciphers = SSL_get_ciphers(tmpSsl);
+        if (ciphers) {
+            int count = sk_SSL_CIPHER_num(ciphers);
+            LOG_INFO("Available ciphers (" + std::to_string(count) + "):");
+            for (int i = 0; i < count && i < 10; i++) {
+                const SSL_CIPHER* c = sk_SSL_CIPHER_value(ciphers, i);
+                LOG_INFO("  " + std::string(SSL_CIPHER_get_name(c)));
+            }
+            if (count > 10) LOG_INFO("  ... and " + std::to_string(count - 10) + " more");
         }
-        DH_free(dh);
+        SSL_free(tmpSsl);
     }
     
     // Disable client certificate verification (we're the server)
     SSL_CTX_set_verify(m_ctx, SSL_VERIFY_NONE, nullptr);
     
-    LOG_INFO("SSL configured for SSLv3/TLS1.0 with ADH+legacy ciphers for certificate bypass");
+    LOG_INFO("SSL configured for SSLv3/TLS1.0 with RC4/AES ciphers");
     
     // Load certificate file
     if (SSL_CTX_use_certificate_file(m_ctx, certFile.c_str(), SSL_FILETYPE_PEM) <= 0) {

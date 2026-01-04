@@ -136,50 +136,154 @@ Since the IV progression algorithm is unknown, we use **keystream extraction**:
 2. Extract keystream: `keystream = encrypted XOR decrypted`
 3. Apply keystream: `decrypted = encrypted XOR keystream`
 
+### How Keystream Extraction Works
+
+The encryption is a simple XOR stream cipher:
+```
+ciphertext = plaintext XOR keystream
+```
+
+Therefore:
+```
+keystream = ciphertext XOR plaintext
+plaintext = ciphertext XOR keystream
+```
+
+By obtaining a memory dump of the DLL after the runtime unpacker has decrypted it, we have both:
+- **Ciphertext**: The encrypted sections in the packed DLL file
+- **Plaintext**: The decrypted sections in the memory dump
+
+XORing these together gives us the keystream that was used, which we can then apply to decrypt the original file.
+
 ### Tools
 
-- **[activation_decryptor.py](../tools/analysis/activation_decryptor.py)** - Main decryption tool
-- **[xtea_decrypt.py](../tools/analysis/xtea_decrypt.py)** - XTEA implementation for analysis
+| Tool | Purpose |
+|------|---------|
+| [activation_decryptor.py](../tools/analysis/activation_decryptor.py) | Main decryption tool using keystream extraction |
+| [xtea_decrypt.py](../tools/analysis/xtea_decrypt.py) | XTEA implementation for algorithm analysis |
+| [decrypt_activation.py](../tools/analysis/decrypt_activation.py) | Additional analysis and keystream research |
 
-### Usage
+### Step-by-Step Usage
+
+#### Step 1: Create a Memory Dump
+
+Using x64dbg, Process Hacker, or similar:
+
+1. Start Dead Space 2 and wait for the main menu
+2. The protection unpacks `activation.x86.dll` automatically
+3. Attach a debugger or memory dumper to `deadspace2.exe`
+4. Find the `activation.x86.dll` module (base address varies, typically ~0x79650000)
+5. Dump the entire module memory to a file (e.g., `activation_dumped.bin`)
+
+**Important**: The dump must be in VA (Virtual Address) layout, not file layout. The dump should be ~6.79 MB (unpacked size).
+
+#### Step 2: Run the Decryptor
 
 ```bash
-# Create memory dump (using x64dbg or similar):
-# 1. Load activation.x86.dll
-# 2. Let unpacker run
-# 3. Dump memory from image base
+cd tools/analysis
+python3 activation_decryptor.py <packed_dll> <memory_dump> [output_dll]
 
-# Decrypt using keystream extraction:
-python3 activation_decryptor.py activation.x86.dll activation_dumped.bin decrypted.dll
+# Example:
+python3 activation_decryptor.py \
+    "/path/to/Dead Space 2/activation.x86.dll" \
+    "activation_dumped.bin" \
+    "activation_decrypted.dll"
 ```
+
+#### Step 3: Verify Output
+
+The decryptor will show:
+```
+Loading packed DLL: /path/to/activation.x86.dll
+Loading memory dump: activation_dumped.bin
+Packed size: 6,364,672 bytes
+Dump size:   6,791,168 bytes
+
+Processing sections:
+------------------------------------------------------------
+  .text   : decrypted 457,728 bytes ✓
+  .rdata  : decrypted 156,672 bytes ✓
+  .data   : decrypted 9,216 bytes ✓
+  .rsrc   : not encrypted, skipping
+  .reloc  : decrypted 35,840 bytes ✓
+
+Verification:
+------------------------------------------------------------
+  .text   : ✓ MATCH
+  .rdata  : ✓ MATCH
+  .data   : ✓ MATCH
+  .rsrc   : ✓ MATCH
+  .reloc  : ✓ MATCH
+
+✓ Decryption successful!
+```
+
+### Technical Details
+
+The decryptor performs these operations:
+
+1. **Parse PE Headers**: Reads section table to find encrypted regions
+2. **Map Offsets**: Converts between file offsets (raw) and memory offsets (VA)
+3. **Extract Keystream**: For each encrypted section:
+   - Read encrypted bytes from packed file at `raw_ptr`
+   - Read decrypted bytes from dump at `va` offset
+   - Compute: `keystream[i] = packed[raw_ptr + i] XOR dump[va + i]`
+4. **Apply Decryption**: Write decrypted bytes back to output file
+5. **Verify**: Compare decrypted output with dump to ensure correctness
+
+### Section Offset Mapping
+
+| Section | File Offset (raw_ptr) | Memory Offset (VA) | Size |
+|---------|----------------------|-------------------|------|
+| .text   | 0x00000400 | 0x00001000 | 0x6F000 |
+| .rdata  | 0x00070000 | 0x00071000 | 0x27000 |
+| .data   | 0x00096400 | 0x00098000 | 0x02800 |
+| .reloc  | 0x00098E00 | 0x000A0000 | 0x06400 |
 
 ## Verification
 
 The .text section begins with a standard x86 function prologue after decryption:
 
-```
+```asm
 55          push ebp
 8B EC       mov ebp, esp
 8B 45 0C    mov eax, [ebp+0Ch]
 85 C0       test eax, eax
 74 0F       jz short +0Fh
+83 F8 02    cmp eax, 2
+77 0A       ja short +0Ah
+8B 4D 08    mov ecx, [ebp+08h]
 ...
 ```
+
+This is the entry point of the first function in `.text`, confirming successful decryption.
+
+## Limitations
+
+- **Requires memory dump**: Cannot decrypt without a runtime dump
+- **Dump must be VA layout**: File-layout dumps won't work
+- **Version specific**: Different game versions may have different IVs
 
 ## Future Work
 
 To create a standalone decryptor without memory dump:
 
-1. **Deep reverse engineering** - Trace the unpacker's IV generation code
-2. **Runtime debugging** - Set breakpoints to capture IV values
-3. **Pattern analysis** - Check if IVs might be derived from decrypted data (complex feedback)
+1. **Deep reverse engineering** - Trace the unpacker's IV generation code in the S3/S4 sections
+2. **Runtime debugging** - Set breakpoints in the XTEA loop to capture IV values for each block
+3. **Pattern analysis** - Check if IVs might be derived from decrypted data (complex feedback mode)
+4. **Brute force search** - For small sections, might be feasible to search for valid IV sequences
 
 ## Related Files
 
-- SSL patcher: [ds2_ssl_patcher_v11.exe](../ds2_ssl_patcher_v11.exe)
-- Decrypted output: [activation_decrypted.dll](../tools/activation_decrypted.dll)
+| File | Description |
+|------|-------------|
+| [tools/analysis/activation_decryptor.py](../tools/analysis/activation_decryptor.py) | Main decryption tool |
+| [tools/analysis/xtea_decrypt.py](../tools/analysis/xtea_decrypt.py) | XTEA algorithm analysis |
+| [tools/runtime_patcher/ds2_ssl_patcher_v11.c](../tools/runtime_patcher/ds2_ssl_patcher_v11.c) | SSL bypass patcher |
+| [docs/ssl_verification_analysis.md](ssl_verification_analysis.md) | SSL callback analysis |
 
 ## References
 
-- XTEA: https://en.wikipedia.org/wiki/XTEA
-- TEA: https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm
+- XTEA Algorithm: https://en.wikipedia.org/wiki/XTEA
+- TEA Family: https://en.wikipedia.org/wiki/Tiny_Encryption_Algorithm
+- PE File Format: https://docs.microsoft.com/en-us/windows/win32/debug/pe-format

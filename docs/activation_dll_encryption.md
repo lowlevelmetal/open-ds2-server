@@ -279,8 +279,10 @@ To create a standalone decryptor without memory dump:
 |------|-------------|
 | [tools/analysis/activation_decryptor.py](../tools/analysis/activation_decryptor.py) | Main decryption tool |
 | [tools/analysis/xtea_decrypt.py](../tools/analysis/xtea_decrypt.py) | XTEA algorithm analysis |
+| [tools/analysis/dll_analyzer.py](../tools/analysis/dll_analyzer.py) | Comprehensive PE analyzer |
 | [tools/runtime_patcher/ds2_ssl_patcher_v11.c](../tools/runtime_patcher/ds2_ssl_patcher_v11.c) | SSL bypass patcher |
 | [docs/ssl_verification_analysis.md](ssl_verification_analysis.md) | SSL callback analysis |
+| [docs/activation_dll_reverse_engineering.md](activation_dll_reverse_engineering.md) | Full reverse engineering analysis |
 
 ## References
 

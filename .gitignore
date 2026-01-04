@@ -81,4 +81,6 @@ tools/analysis/*.bin
 # Python virtual environment
 venv/
 __pycache__/
-*.pyc
+*.pyc# Decrypted DLL (generated)
+tools/analysis/decrypted_*.dll
+tools/analysis/analysis_report.txt

@@ -1,468 +1,280 @@
-# Open Dead Space 2 Server
+# Dead Space 2 Multiplayer Server
 
-🚀 **An open-source reconstruction of the Dead Space 2 multiplayer servers**
+An open-source server emulator for Dead Space 2 (PC, 2011) multiplayer, implementing EA's proprietary Blaze protocol.
 
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)](https://isocpp.org/std/the-standard)
-[![Platform](https://img.shields.io/badge/platform-Linux%20%7C%20Windows-lightgrey.svg)]()
+> **Project Goal**: Restore online multiplayer functionality for Dead Space 2 after EA's official servers were shut down.
 
----
+## 🎮 Features
 
-## 💀 The Story
+- **Full Blaze Protocol** - Custom C++ implementation of EA's BlazeSDK server
+- **TDF Encoding** - Complete Tag Data Format encoder/decoder
+- **SSL/TLS Support** - Secure connections matching original infrastructure  
+- **Multiple Server Components**:
+  - Redirector Server (port 42127) - Initial connection routing
+  - Blaze Server (port 10041) - Authentication, matchmaking, game sessions
+  - QoS Server (port 17502) - Network quality detection
 
-My buddy and I both love Dead Space 2. We wanted to play the multiplayer together on PC, only to find EA shut down the servers. We won't stand for it—so we're rebuilding them ourselves. *Make us whole again.*
+### Implementation Status
 
----
-
-## 🎯 Project Status
-
-| Component | Status |
-|-----------|--------|
-| Protocol Reverse Engineering | ✅ Complete |
-| TDF Serialization | ✅ Complete |
-| Blaze Packet Codec | ✅ Complete |
-| Redirector Service | ✅ Implemented |
-| Authentication | ✅ Implemented |
-| Game Manager | ✅ Implemented |
-| Stats Service | ✅ Implemented |
-| SSL/TLS Support | 🔄 In Progress |
-| Full Game Testing | 📋 Planned |
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Redirector | ✅ Complete | Server instance routing |
+| Authentication | ✅ Complete | Login, silent login, Origin login |
+| Util | ✅ Complete | Pre/post auth, client config |
+| GameManager | 🔄 In Progress | Create/join/list games |
+| Matchmaking | 🔄 In Progress | Queue-based matching |
+| Association | ⏳ Planned | Friends lists |
+| Stats | ⏳ Planned | Leaderboards |
 
 ---
 
-## 🔧 Technical Architecture
-
-### EA Blaze Protocol
-
-Dead Space 2 uses **EA's Blaze** backend infrastructure—the same system powering Battlefield, Mass Effect 3, and other EA titles. Through reverse engineering the game binary, we've reconstructed the protocol:
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    CLIENT (Dead Space 2)                     │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ SSL/TLS (Port 42127)
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    REDIRECTOR SERVICE                        │
-│  • Responds to ServerInstanceRequest                         │
-│  • Points client to game server                              │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              │ TCP (Port 10041)
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    GAME SERVER                               │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
-│  │    Auth     │ │   Util      │ │   Stats     │            │
-│  │  Component  │ │  Component  │ │  Component  │            │
-│  └─────────────┘ └─────────────┘ └─────────────┘            │
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐            │
-│  │   Game      │ │  Messaging  │ │  Association│            │
-│  │  Manager    │ │  Component  │ │    Lists    │            │
-│  └─────────────┘ └─────────────┘ └─────────────┘            │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Blaze Packet Structure
-
-All communication uses a binary packet format with TDF (Type Definition Format) payloads:
-
-```
-┌────────┬────────┬────────┬────────┬────────┬────────┬─────────────┐
-│ Length │ Comp   │ Cmd    │ Error  │ Msg    │ Msg    │   Payload   │
-│ (2B)   │ ID(2B) │ ID(2B) │ (2B)   │ Type(2)│ ID(2B) │   (TDF)     │
-└────────┴────────┴────────┴────────┴────────┴────────┴─────────────┘
-   BE       BE       BE       BE       BE       BE      Variable
-```
-
-### TDF Encoding
-
-TDF uses a tag-based binary serialization format:
-
-| Type ID | Type | Description |
-|---------|------|-------------|
-| 0x00 | Integer | Variable-length encoded |
-| 0x01 | String | Length-prefixed UTF-8 |
-| 0x02 | Blob | Raw binary data |
-| 0x03 | Struct | Nested TDF structure |
-| 0x04 | List | Homogeneous array |
-| 0x05 | Map | Key-value pairs |
-| 0x06 | Union | Tagged union type |
-
-Labels are encoded using a base-32 scheme compressed into 3 bytes.
-
-### Component IDs
-
-| Component | ID | Description |
-|-----------|-----|-------------|
-| Authentication | 0x01 | Login, personas, sessions |
-| GameManager | 0x04 | Matchmaking, lobbies, games |
-| Redirector | 0x05 | Initial connection routing |
-| Stats | 0x07 | Player statistics, leaderboards |
-| Util | 0x09 | Ping, config, telemetry |
-| Messaging | 0x0F | In-game messaging |
-| AssociationLists | 0x19 | Friends, blocked players |
-| GameReporting | 0x1C | Post-match stats |
-
-### Internal Codename: "Arson"
-
-The game's internal codename is **Arson**, found throughout the binary in structures like:
-- `ArsonCTF` - Capture the Flag mode
-- `ArsonLeague` - Ranked/competitive play
-- `ArsonClub` - Team/clan system
-
----
-
-## 🚀 Building
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Compiler**: GCC 9+ or Clang 10+ (C++17 required)
-- **CMake**: 3.16 or higher
-- **Platform**: Linux (Windows support planned)
+- **C++ Compiler**: GCC 8+ or Clang 7+ (C++17 support)
+- **CMake**: 3.16+
+- **Perl**: Required for OpenSSL build
+- **Dead Space 2**: Steam or Origin version
 
-### Build Instructions
+> **Note**: OpenSSL 1.1.1 is automatically downloaded and built during the CMake process. This bundled version provides native TLS 1.0 support required for Dead Space 2 (2011) compatibility.
+
+### Building
 
 ```bash
 # Clone the repository
-git clone https://github.com/lowlevelmetal/open-ds2-server.git
-cd open-ds2-server
+git clone https://github.com/yourname/ds2-server.git
+cd ds2-server
 
-# Create build directory
+# Initialize dependencies
+cd server
+git submodule update --init --recursive
+
+# Build (first build downloads and compiles OpenSSL 1.1.1)
 mkdir build && cd build
-
-# Configure and build
 cmake ..
 make -j$(nproc)
-
-# Binary located at build/bin/ds2-server
 ```
 
-### Configuration
+⏱️ **First build takes ~5 minutes** due to OpenSSL compilation. Subsequent builds are fast.
 
-Edit `config/server.ini`:
-
-```ini
-[server]
-bind_address = 0.0.0.0
-game_port = 10041
-redirector_port = 42127
-
-[logging]
-log_level = 1  # 0=Error, 1=Info, 2=Debug
-```
-
----
-
-## 🎮 Connecting
-
-### Step 1: DNS Override
-
-Add to your hosts file (`/etc/hosts` on Linux, `C:\Windows\System32\drivers\etc\hosts` on Windows):
-
-```
-YOUR_SERVER_IP    gosredirector.ea.com
-YOUR_SERVER_IP    gosredirector.online.ea.com
-```
-
-### Step 2: Start the Server
+### Generating SSL Certificates
 
 ```bash
-./build/bin/ds2-server
+cd server
+mkdir -p certs
+
+# Generate private key and certificate
+openssl genrsa -out certs/server.key 2048
+openssl req -new -x509 -key certs/server.key -out certs/server.crt -days 365 \
+    -subj "/CN=gosredirector.online.ea.com"
 ```
 
-### Step 3: Launch Dead Space 2
-
-Start the game and attempt to connect to multiplayer. The client should connect to your server instead of EA's defunct servers.
-
-> ⚠️ **Note**: SSL/TLS support is still in progress. You may need to bypass certificate validation or use a custom certificate.
-
----
-
-## 🖥️ Client Setup Guide
-
-Detailed instructions for connecting Dead Space 2 to your custom server.
-
-### Windows Setup
-
-#### 1. Edit Hosts File
-
-1. Open Notepad **as Administrator** (right-click → Run as administrator)
-2. Open the file: `C:\Windows\System32\drivers\etc\hosts`
-3. Add these lines at the bottom (replace `SERVER_IP` with your server's IP address):
-
-```
-# Dead Space 2 Custom Server
-SERVER_IP    gosredirector.ea.com
-SERVER_IP    gosredirector.online.ea.com
-```
-
-4. Save the file
-
-> **Example**: If your server is at `192.168.1.100`:
-> ```
-> 192.168.1.100    gosredirector.ea.com
-> 192.168.1.100    gosredirector.online.ea.com
-> ```
-
-#### 2. Flush DNS Cache
-
-Open Command Prompt as Administrator and run:
-```cmd
-ipconfig /flushdns
-```
-
-#### 3. Firewall Configuration
-
-If running the server locally, ensure Windows Firewall allows:
-- **TCP port 42127** (Redirector - SSL)
-- **TCP port 10041** (Game server)
-
-```cmd
-netsh advfirewall firewall add rule name="DS2 Redirector" dir=in action=allow protocol=TCP localport=42127
-netsh advfirewall firewall add rule name="DS2 Game Server" dir=in action=allow protocol=TCP localport=10041
-```
-
-#### 4. Launch Game
-
-1. Start Dead Space 2 from Steam/Origin
-2. Go to Multiplayer
-3. The game will connect to your custom server
-
----
-
-### Linux (Proton/Steam) Setup
-
-#### 1. Edit Hosts File
+### Running the Server
 
 ```bash
-sudo nano /etc/hosts
+cd server
+./build/ds2-server
 ```
 
-Add these lines (replace `SERVER_IP` with your server's IP):
-
+You should see:
 ```
-# Dead Space 2 Custom Server
-SERVER_IP    gosredirector.ea.com
-SERVER_IP    gosredirector.online.ea.com
-```
-
-Save with `Ctrl+O`, exit with `Ctrl+X`.
-
-#### 2. Flush DNS Cache
-
-Depending on your distro:
-
-```bash
-# systemd-resolved (Ubuntu, Fedora, Arch, etc.)
-sudo systemd-resolve --flush-caches
-
-# Or restart the service
-sudo systemctl restart systemd-resolved
-
-# NetworkManager
-sudo systemctl restart NetworkManager
-
-# nscd (if installed)
-sudo nscd -i hosts
+[INFO] Dead Space 2 Server Emulator starting...
+[INFO] SSL configured with bundled OpenSSL 1.1.1
+[INFO] TLS versions enabled: TLS 1.0, TLS 1.1, TLS 1.2
+[INFO] Redirector listening on port 42127
+[INFO] Blaze server listening on port 10041
+[INFO] QoS server listening on port 17502
 ```
 
-#### 3. Steam Proton Configuration
+### Connecting Your Game
 
-Dead Space 2 runs well under Proton. Recommended settings:
+Add these entries to your hosts file:
 
-1. In Steam, right-click **Dead Space 2** → **Properties**
-2. Go to **Compatibility**
-3. Check **Force the use of a specific Steam Play compatibility tool**
-4. Select **Proton Experimental** or **Proton 8.0+**
-
-#### 4. Launch Options (Optional)
-
-For better debugging, you can add launch options:
-
-1. Right-click Dead Space 2 → Properties → General
-2. In **Launch Options**, add:
-   ```
-   PROTON_LOG=1 %command%
-   ```
-
-This creates logs in your home directory if you encounter issues.
-
-#### 5. Firewall Configuration
-
-If running the server on Linux:
-
-```bash
-# UFW (Ubuntu)
-sudo ufw allow 42127/tcp comment "DS2 Redirector"
-sudo ufw allow 10041/tcp comment "DS2 Game Server"
-
-# firewalld (Fedora, RHEL)
-sudo firewall-cmd --permanent --add-port=42127/tcp
-sudo firewall-cmd --permanent --add-port=10041/tcp
-sudo firewall-cmd --reload
-
-# iptables
-sudo iptables -A INPUT -p tcp --dport 42127 -j ACCEPT
-sudo iptables -A INPUT -p tcp --dport 10041 -j ACCEPT
-```
-
-#### 6. Launch Game
-
-Start Dead Space 2 from Steam and go to Multiplayer.
-
----
-
-### Troubleshooting
-
-#### Connection Refused / Timeout
-
-1. **Verify hosts file**: Run `ping gosredirector.ea.com` - it should resolve to your server IP
-2. **Check server is running**: Ensure you see "Server is running" in the server console
-3. **Firewall**: Make sure ports 42127 and 10041 are open
-4. **SSL Issues**: The game requires SSL on port 42127. Check server logs for SSL errors
-
-#### DNS Not Updating
-
-- Windows: Run `ipconfig /flushdns` and restart your browser/game
-- Linux: Restart systemd-resolved or NetworkManager
-- Try rebooting if DNS changes don't take effect
-
-#### SSL Certificate Errors
-
-The game validates SSL certificates. Current workarounds:
-
-1. **Use the generated certificates** - Run `./scripts/generate_certs.sh` on the server
-2. **Client patching** (advanced) - May be needed to bypass certificate validation
-
-#### Game Crashes on Connect
-
-- Check Proton version (try Proton Experimental)
-- Verify game files in Steam
-- Check server logs for protocol errors
-
-#### "Server Unavailable" Message
-
-This usually means the redirector responded but pointed to an unreachable game server. Verify:
-- Game server port (10041) is accessible
-- Server configuration has correct ports
-- No firewall blocking between client and server
-
----
-
-### Network Diagram
+**Linux/macOS**: `/etc/hosts`  
+**Windows**: `C:\Windows\System32\drivers\etc\hosts`
 
 ```
-┌─────────────────┐         ┌─────────────────────────────────┐
-│  Your Computer  │         │          Server                 │
-│                 │         │                                 │
-│  Dead Space 2   │◄───────►│  Port 42127 (SSL Redirector)   │
-│   (Client)      │   SSL   │                                 │
-│                 │         │  Port 10041 (Game Server)       │
-│  hosts file:    │◄───────►│                                 │
-│  gosredirector  │   TCP   │                                 │
-│  .ea.com →      │         │                                 │
-│  SERVER_IP      │         │                                 │
-└─────────────────┘         └─────────────────────────────────┘
+127.0.0.1 gosredirector.online.ea.com
+127.0.0.1 ds2prod.online.ea.com
 ```
+
+Launch Dead Space 2 and select Multiplayer!
 
 ---
 
 ## 📁 Project Structure
 
 ```
-open-ds2-server/
-├── src/
-│   ├── blaze/              # EA Blaze protocol implementation
-│   │   ├── blaze_types.hpp # Enums, constants, structures
-│   │   ├── tdf.hpp/cpp     # TDF serialization
-│   │   ├── blaze_codec.hpp/cpp  # Packet encode/decode
-│   │   ├── components.hpp/cpp   # Component handlers
-│   │   └── blaze_server.hpp/cpp # Blaze server
-│   ├── core/               # Server core
-│   │   ├── server.hpp/cpp  # Main server class
-│   │   ├── session.hpp/cpp # Client sessions
-│   │   └── config.hpp/cpp  # Configuration
-│   ├── network/            # Networking layer
-│   │   ├── tcp_server.hpp/cpp
-│   │   ├── udp_server.hpp/cpp
-│   │   └── packet.hpp/cpp
-│   ├── protocol/           # Legacy protocol handlers
-│   ├── database/           # Data persistence
-│   └── utils/              # Utilities (logging, crypto, buffers)
-├── config/
-│   └── server.ini          # Server configuration
-├── docs/
-│   └── PROTOCOL.md         # Protocol documentation
-└── CMakeLists.txt
+ds2-server/
+├── server/                       # 🎯 Main server implementation
+│   ├── CMakeLists.txt            # Build configuration (downloads OpenSSL 1.1.1)
+│   ├── README.md                 # Server-specific documentation
+│   ├── extern/                   # Git submodule dependencies
+│   │   ├── asio/                 # Standalone networking library
+│   │   └── spdlog/               # High-performance logging
+│   ├── include/
+│   │   ├── blaze/                # Protocol implementation
+│   │   │   ├── types.hpp         # Core types and enums
+│   │   │   ├── packet.hpp        # Packet encoding/decoding
+│   │   │   ├── tdf.hpp           # Tag Data Format
+│   │   │   └── component.hpp     # Component base class
+│   │   ├── network/              # Network layer
+│   │   │   ├── ssl_server.hpp    # SSL/TLS server
+│   │   │   ├── client_connection.hpp
+│   │   │   └── qos_server.hpp    # HTTP QoS endpoints
+│   │   └── components/           # Blaze components
+│   │       ├── redirector.hpp    # Server routing
+│   │       ├── authentication.hpp
+│   │       ├── util.hpp
+│   │       └── game_manager.hpp
+│   └── src/                      # Implementation files
+│
+├── docs/                         # 📚 Protocol documentation
+│   ├── README.md                 # Documentation index
+│   └── 04-blaze-connection-analysis.md  # Connection flow analysis
+│
+├── scripts/                      # 🔧 Utility tools (Python)
+│   ├── memory_dumper.py          # Binary analysis tools
+│   └── find_process.py           # Process utilities
+│
+└── research/                     # 🔬 Reverse engineering notes
+    └── REVERSE_ENGINEERING_NOTES.md
 ```
 
 ---
 
-## 🔬 Reverse Engineering Notes
+## 🔧 Configuration
 
-The protocol was reverse engineered from `deadspace2.exe` (32-bit PE, ~48MB) using:
+The server uses sensible defaults but can be configured:
 
-- **Static Analysis**: Ghidra for disassembly and string extraction
-- **String Mining**: Identified Blaze component names, server hostnames, TDF structure names
-- **Cross-Reference**: Compared with other Blaze implementations (ME3, Battlefield)
+| Setting | Default | Description |
+|---------|---------|-------------|
+| Redirector Port | 42127 | Initial connection point |
+| Blaze Port | 10041 | Main game server |
+| QoS Port | 17502 | Network quality endpoints |
+| SSL Certs | `certs/` | Certificate directory |
 
-Key discoveries:
-- Server hostnames: `gosredirector.ea.com`, `gosredirector.online.ea.com`
-- Ports: 42127 (SSL redirector), 7613 (alternate)
-- Embedded root CA: Equifax Secure Certificate Authority
+---
 
-See [docs/PROTOCOL.md](docs/PROTOCOL.md) for detailed protocol documentation.
+## 📖 Protocol Documentation
+
+This project includes extensive reverse engineering documentation:
+
+| Document | Description |
+|----------|-------------|
+| [Blaze Connection Flow](docs/04-blaze-connection-analysis.md) | Complete connection sequence |
+| [Server Documentation](server/README.md) | Implementation details |
+| [RE Notes](REVERSE_ENGINEERING_NOTES.md) | Raw research notes |
+
+### EA Blaze Protocol Overview
+
+The Blaze protocol uses:
+- **TDF (Tag Data Format)**: Binary serialization with 3-byte compressed tags
+- **Components**: Modular RPC system (Auth, GameManager, Util, etc.)
+- **SSL/TLS**: All traffic encrypted
+- **Async messaging**: Request/response with notifications
+
+```
+Client                          Server
+  |                               |
+  |----[SSL Handshake]----------->|
+  |                               |
+  |----[preAuth request]--------->|
+  |<---[preAuth response]---------|
+  |                               |
+  |----[login request]----------->|
+  |<---[login response]-----------|
+  |                               |
+  |----[postAuth request]-------->|
+  |<---[postAuth response]--------|
+  |                               |
+  |----[Game operations...]------>|
+```
+
+---
+
+## 🔬 Research & Reverse Engineering
+
+This project was built through extensive reverse engineering of Dead Space 2's binaries.
+
+### Tools Used
+- **Ghidra** - Static analysis and decompilation
+- **x64dbg** - Dynamic analysis under Wine
+- **Custom Python scripts** - Memory dumping and binary analysis
+
+### Key Discoveries
+- 453 BlazeSDK classes identified in executable
+- 164 Blaze error codes documented  
+- Complete connection state machine mapped
+- TDF encoding scheme fully reversed
+
+### RE Documentation
+
+| Document | Description |
+|----------|-------------|
+| [Solidshield Unpacking](docs/01-solidshield-unpacking.md) | DRM layer analysis |
+| [Binary Analysis](docs/02-activation-dll-analysis.md) | Function mapping |
+| [Executable Analysis](docs/03-main-executable-analysis.md) | PE structure, classes |
+| [Blaze Protocol](docs/04-blaze-connection-analysis.md) | Network protocol |
 
 ---
 
 ## 🤝 Contributing
 
-We need help with:
+Contributions welcome! Areas that need work:
 
-- **🔐 SSL/TLS Implementation**: Proper certificate handling for redirector
-- **🧪 Testing**: Connecting actual game clients and fixing issues
-- **📊 Game State**: Full synchronization of player positions, actions
-- **💾 Persistence**: Database backend for stats and accounts
-- **🪟 Windows Support**: Cross-platform networking code
+- [ ] Complete matchmaking queue logic
+- [ ] Stats/leaderboard component
+- [ ] Association (friends) component  
+- [ ] Game state relay between clients
+- [ ] Traffic capture for protocol accuracy
+- [ ] Persistent storage backend
+- [ ] Docker containerization
 
-### Getting Started
+### Development Setup
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+```bash
+# Build with debug symbols
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+make
 
----
-
-## 📚 Related Projects
-
-- [Arcadia](https://github.com/jacobtread/Arcadia) - Mass Effect 3 Blaze server emulator
-- [Battlefield Redux](https://github.com/BattlefieldRedux) - Battlefield server emulators
-- [OpenSpy](https://github.com/openspy) - GameSpy server emulation
+# Run with verbose logging
+./ds2-server --verbose
+```
 
 ---
 
-## ⚖️ Legal Notice
+## 📜 Legal
 
-This project is not affiliated with, endorsed by, or connected to Electronic Arts Inc. or Visceral Games. Dead Space is a trademark of Electronic Arts Inc.
+This project is for **educational and preservation purposes only**.
 
-This is a clean-room reverse engineering project for educational and preservation purposes. No copyrighted code or assets from the original game are included.
+- Reverse engineering conducted for interoperability under applicable law
+- No copyrighted game assets included
+- Server implementation is clean-room based on protocol observations
+- Original game required to play
+
+**Dead Space 2** is a trademark of Electronic Arts Inc.
 
 ---
 
-## 📜 License
+## 🙏 Acknowledgments
 
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+- The Dead Space community for keeping the game alive
+- EA/Visceral Games for creating Dead Space 2
+- Open-source projects: Asio, spdlog, OpenSSL
 
 ---
 
-<div align="center">
+## 📊 Project Stats
 
-**"There's always Peng."**
+| Metric | Value |
+|--------|-------|
+| Lines of C++ | ~3,500 |
+| Blaze components | 4 implemented |
+| Protocol commands | 15+ |
+| Documentation | ~130 KB |
 
-*Built with frustration, nostalgia, and caffeine.*
+---
 
-</div>
+*Reverse engineering analysis conducted 2024-2026*

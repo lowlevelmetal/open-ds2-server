@@ -1,86 +1,36 @@
-# Build directories
-build/
-cmake-build-*/
-out/
+# Reverse Engineering Notes (contains session logs)
+REVERSE_ENGINEERING_NOTES.md
 
-# SSL certificates (contain private keys - do not commit!)
-certs/
-
-# CMake generated files
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-compile_commands.json
-
-# Compiled binaries
+# Binary dumps and extracted data
+dumps/
 bin/
-lib/
-*.exe
-*.out
-*.app
-ds2-server
 
-# Object files
-*.o
-*.obj
-*.lo
-*.slo
+# Python virtual environment
+venv/
+.venv/
+__pycache__/
+*.pyc
 
-# Precompiled headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lai
-*.so
-*.so.*
-*.dylib
+# Binary files
 *.dll
+*.bin
+*.exe
 
-# IDE and editor files
-.idea/
+# Build artifacts
+server/build/
+server/certs/
+*.o
+*.a
+
+# IDE files
 .vscode/
+.idea/
 *.swp
 *.swo
-*~
-.project
-.cproject
-.settings/
-*.sublime-*
+
+# Logs
+*.log
 
 # OS files
 .DS_Store
 Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Config (keep templates)
-config/server.ini
-!config/server.ini.example
-!config/openssl-legacy.cnf
-
-# Debug
-*.dSYM/
-core
-vgcore.*
-
-# Memory dumps and analysis artifacts
-*.bin
-tools/*.bin
-tools/*.dll
-tools/activation_dumped.bin
-tools/activation_decrypted*.dll
-tools/analysis/*.bin
-
-# Python virtual environment
-venv/
-__pycache__/
-*.pyc# Decrypted DLL (generated)
-tools/analysis/decrypted_*.dll
-tools/analysis/analysis_report.txt

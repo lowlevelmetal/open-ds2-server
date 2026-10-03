@@ -1,0 +1,24 @@
+# Build output
+/build/
+/out/
+compile_commands.json
+.cache/
+
+# Local configuration
+/config/server.ini
+
+# Packet captures and dumps can contain account emails, passwords and auth
+# tokens. Never commit them; share sanitized excerpts instead.
+/captures/
+*.pcap
+*.pcapng
+
+# Game files
+*.exe
+*.dll
+
+# Editors
+.vscode/
+.idea/
+*.swp
+.DS_Store
